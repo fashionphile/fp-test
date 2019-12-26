@@ -5,6 +5,8 @@ namespace Tests\Unit;
 use App\User;
 use App\Repositories\UserRepository;
 use App\Services\FooService;
+use Faker\Generator as Faker;
+use Mockery;
 use Tests\TestCase;
 
 class FooServiceTest extends TestCase
@@ -14,8 +16,10 @@ class FooServiceTest extends TestCase
     {
         parent::setUp();
  
+        $this->repository = $this->mock(UserRepository::class);
+
+        $this->faker = app(Faker::class);
         $this->service = app(FooService::class);
-        $this->repository = mock(UserRepository::class);
         $this->scorerArray = [
             'jazz' => [
                 'malone' => 28.2,
@@ -51,7 +55,7 @@ class FooServiceTest extends TestCase
      */
     public function testParseForMostPoints()
     {
-        $topScorer = $this->service->etTopScorerFromArray($this->scorerArray);
+        $topScorer = $this->service->setTopScorerFromArray($this->scorerArray);
 
         $this->assertEquals($topScorer, 'jordan');
     }
@@ -76,17 +80,17 @@ class FooServiceTest extends TestCase
     public function testUpdateAddressForUser()
     {
         $user = factory(User::class)->make([
-            'first_name' => $faker->name,
-            'last_name' => $faker->name,
-            'email' => $faker->email,
-            'address' => $faker->address
+            'first_name' => $this->faker->name,
+            'last_name' => $this->faker->name,
+            'email' => $this->faker->email,
+            'address' => $this->faker->address
         ]);
 
         $input = [
-            'address' => $faker->address
+            'address' => $this->faker->address
         ];
 
-        $user = $this->service->update($input);
+        $user = $this->service->update($user, $input);
 
         $this->assertEquals($user->address, $input['address']);
     }
@@ -98,32 +102,32 @@ class FooServiceTest extends TestCase
      */
     public function testFetchFashionphileEmails()
     {
-        $users = factory(App\User::class, 3)->make([
-            'first_name' => $faker->name,
-            'last_name' => $faker->name,
-            'email' => sprintf("%s@gmail.com", $faker->name),
-            'address' => $faker->address
+        $users = factory(User::class, 3)->make([
+            'first_name' => $this->faker->name,
+            'last_name' => $this->faker->name,
+            'email' => sprintf("%s@gmail.com", $this->faker->name),
+            'address' => $this->faker->address
         ]);
 
-        $users->merge(factory(App\User::class, 4)->make([
-            'first_name' => $faker->name,
-            'last_name' => $faker->name,
-            'email' => sprintf("%s@fashionphile.com", $faker->name),
-            'address' => $faker->address
+        $users = $users->toBase()->merge(factory(User::class, 4)->make([
+            'first_name' => $this->faker->name,
+            'last_name' => $this->faker->name,
+            'email' => sprintf("%s@fashionphile.com", $this->faker->name),
+            'address' => $this->faker->address
         ]));
 
-        $users->merge(factory(App\User::class, 2)->make([
-            'first_name' => $faker->name,
-            'last_name' => $faker->name,
-            'email' => sprintf("%s@ymail.com", $faker->name),
-            'address' => $faker->address
+        $users = $users->toBase()->merge(factory(User::class, 2)->make([
+            'first_name' => $this->faker->name,
+            'last_name' => $this->faker->name,
+            'email' => sprintf("%s@ymail.com", $this->faker->name),
+            'address' => $this->faker->address
         ]));
 
-        $this->userRepository->shouldReceive('fetchUsers')->andReturn($users);
+        $this->repository->shouldReceive('fetchUsers')->once()->andReturn($users);
 
         $fetchedUser = $this->service->fetchFashionphileUsers();
 
-        $this->assertEquals(count($users), 4);
-        $this->assertEquals($users->count(), 4);
+        $this->assertEquals(count($fetchedUser), 4);
+        $this->assertEquals($fetchedUser->count(), 4);
     }
 }
